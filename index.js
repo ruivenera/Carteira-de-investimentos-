@@ -190,7 +190,11 @@ async function yahoo(sym, params) {
     pontos,
     moeda: pence ? 'GBP' : (meta.currency || null),
     atual: isFinite(meta.regularMarketPrice) ? meta.regularMarketPrice * k : null,
-    anterior: isFinite(meta.chartPreviousClose) ? meta.chartPreviousClose * k : null,
+    // previousClose é o fecho da sessão anterior. chartPreviousClose é o fecho
+    // anterior ao início do período pedido — serve para o gráfico, não para a
+    // variação do dia. Trocá-los faz um mês passar por um dia.
+    anterior: isFinite(meta.previousClose) ? meta.previousClose * k
+      : (isFinite(meta.regularMarketPreviousClose) ? meta.regularMarketPreviousClose * k : null),
   };
 }
 
@@ -210,6 +214,7 @@ async function quote(sym, ctx) {
     const y = await yahoo(sym, { range: '1mo', interval: '1d' });
     const ult = y.pontos[y.pontos.length - 1];
     const preco = y.atual != null ? y.atual : (ult && ult[1]);
+    // se a Yahoo não disser, o penúltimo fecho da série serve
     const ant = y.anterior != null ? y.anterior
       : (y.pontos.length > 1 ? y.pontos[y.pontos.length - 2][1] : null);
     if (isFinite(preco)) {
